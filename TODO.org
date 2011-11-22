@@ -1,0 +1,10 @@
+* DONE Implement keyspace
+** Have basics of zookeeper integration (need to reconnect/manage connections  etcs but thats later)
+** Add/remove vnodes from keyspace. Get vnode for a given hash.
+*** For now vnodes start at a certain offset and are responsible for keys that hash to them
+*** Might make sense to rethink this to go towards partitioning the keyspace into n, and have vnodes elect to own certain partitions. More flexible.
+* DONE Flesh out blobserver to write to local vno
+* Make it an rpc server that can be called to write to remote vnode
+* Replication
+** concept of secondary vnodes.
+** tunable synchronous (return only after writes to x replications have completed)
