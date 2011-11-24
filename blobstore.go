@@ -14,11 +14,11 @@ type BlobStore struct {
 	rootDir string
 }
 
-func NewBlobStore() *BlobStore {
+func NewBlobStore(root string, zkHosts string) *BlobStore {
 	b := new(BlobStore)
-	b.ks = NewKeySpace("/blobstore.keyspace", "localhost:2181", 5e6) //TODO: configurable
+	b.ks = NewKeySpace("/blobstore.keyspace", zkHosts, 5e6) //TODO: configurable
 	b.ks.Connect()
-	b.rootDir = "/tmp/vnodes"
+	b.rootDir = root
 	return b
 }
 

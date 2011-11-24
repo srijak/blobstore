@@ -8,7 +8,7 @@ import (
 
 func TestBlobStore_PutGet(t *testing.T) {
 	SetZooKeeperLogLevel(0)
-	b := NewBlobStore()
+	b := NewBlobStore("/tmp/vnodes", "localhost:2181")
 	host, _ := os.Hostname()
 
 	b.ks.AddVnode(-1, host+":8080", "-1")
