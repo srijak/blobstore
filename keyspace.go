@@ -11,6 +11,8 @@ import (
 	l4g "log4go.googlecode.com/hg"
 )
 
+const VALUE_SEPARATOR = "!"
+
 type IKeySpace interface {
 
 }
@@ -23,9 +25,9 @@ type KeySpace struct {
 }
 
 type Vnode struct {
-	offset int
-	host   string
-	dir    string
+	offset    int
+	host_addr string
+	dir       string
 }
 
 func (vn *Vnode) isLocal() bool {
@@ -33,15 +35,21 @@ func (vn *Vnode) isLocal() bool {
 	if err != nil {
 		panic(err)
 	}
-	return vn.host == host
+	return vn.GetHostname() == host
 }
+
+func (vn *Vnode) GetHostname() string {
+	vals := strings.Split(vn.host_addr, ":")
+	return vals[0]
+}
+
 func NewVnode(offset int, node_value string) *Vnode {
 	v := new(Vnode)
 	v.offset = offset
 
 	if node_value != "" {
-		vals := strings.Split(node_value, ":")
-		v.host = vals[0]
+		vals := strings.Split(node_value, VALUE_SEPARATOR)
+		v.host_addr = vals[0]
 		v.dir = vals[1]
 	}
 	return v
@@ -120,7 +128,7 @@ func (k *KeySpace) AddVnode(offset int, host string, dir string) (name string, e
 	//validateDir(dir)
 
 	node := k.getVnodeString(offset)
-	value := fmt.Sprintf("%s:%s", host, dir)
+	value := fmt.Sprintf("%s%s%s", host, VALUE_SEPARATOR, dir)
 
 	stat, err := k.zk.Exists(node)
 	if stat != nil {

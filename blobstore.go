@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"io/ioutil"
 	l4g "log4go.googlecode.com/hg"
+	"rpc"
 )
 
 type BlobStore struct {
@@ -21,44 +22,57 @@ func NewBlobStore() *BlobStore {
 	return b
 }
 
-func (b *BlobStore) Get(hash string) ([]byte, os.Error) {
-	resp_vnode, err := b.ks.GetResponsibleVnode(hash)
+func (b *BlobStore) Get(hash *string, blob *[]byte) os.Error {
+	resp_vnode, err := b.ks.GetResponsibleVnode(*hash)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if resp_vnode.isLocal() {
-		blob, err := b.getBlob(resp_vnode.dir, hash)
+		l4g.Debug("Get. [%s] hash is local.", *hash)
+		*blob, err = b.getBlob(resp_vnode.dir, *hash)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		return blob, nil
-	}
 
-	l4g.Warn("TODO: make rpc call to retrieve from relevant remote server.")
-	return nil, os.NewError("Remote get forwarding TODO")
+	} else {
+
+		l4g.Info("Making rpc call to retrieve from relevant remote server [%s]", resp_vnode.host_addr)
+		return b.getRemoteBlob(hash, blob, resp_vnode.host_addr)
+	}
+	return nil
 }
-func (b *BlobStore) Put(blob []byte) (string, os.Error) {
-	hash := getHash(blob)
-	resp_vnode, err := b.ks.GetResponsibleVnode(hash)
+
+func (b *BlobStore) Put(blob *[]byte, hash *string) os.Error {
+	*hash = getHash(blob)
+	resp_vnode, err := b.ks.GetResponsibleVnode(*hash)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	if resp_vnode.isLocal() {
-		err := b.storeBlob(resp_vnode.dir, hash, blob)
+		l4g.Info("Put. [%s] hash is local.", *hash)
+		err := b.storeBlob(resp_vnode.dir, *hash, blob)
 		if err != nil {
-			return "", err
+			return err
 		}
 	} else {
-		l4g.Warn("TODO: make rpc call to add to relevant remote server.")
-		return "", os.NewError("Remote put forwarding TODO")
+		l4g.Info("Making rpc call to add to relevant remote server [%s]", resp_vnode.host_addr)
+		return b.storeRemoteBlob(blob, hash, resp_vnode.host_addr)
 	}
-
-	return hash, nil
+	return nil
 }
 
-func (b *BlobStore) storeBlob(location, name string, blob []byte) os.Error {
+func (b *BlobStore) storeRemoteBlob(blob *[]byte, hash *string, server string) os.Error {
+	conn, err := rpc.DialHTTP("tcp", server)
+	if err != nil {
+		return err
+	}
+
+	return conn.Call("BlobStore.Put", blob, hash)
+}
+
+func (b *BlobStore) storeBlob(location, name string, blob *[]byte) os.Error {
 	dir_path, full_path := b.buildBlobPath(location, name)
 	if filepath.HasPrefix(b.rootDir, full_path) {
 		msg := fmt.Sprintf("Base path[%s] of vnode wasn't the root dir[%s]", full_path, b.rootDir)
@@ -80,7 +94,7 @@ func (b *BlobStore) storeBlob(location, name string, blob []byte) os.Error {
 		l4g.Info("Blob already exists at %s", full_path)
 		return nil
 	}
-	return ioutil.WriteFile(full_path, blob, 0600)
+	return ioutil.WriteFile(full_path, *blob, 0600)
 
 }
 
@@ -101,6 +115,15 @@ func (b *BlobStore) getBlob(location, name string) ([]byte, os.Error) {
 	return ioutil.ReadFile(full_path)
 
 }
+
+func (b *BlobStore) getRemoteBlob(hash *string, blob *[]byte, server string) os.Error {
+	conn, err := rpc.DialHTTP("tcp", server)
+	if err != nil {
+		return err
+	}
+	return conn.Call("BlobStore.Get", hash, blob)
+}
+
 func (b *BlobStore) buildBlobPath(location, name string) (dir, file string) {
 	// ignores the 4th char (assumes it the separator between algo name and
 	// hash
