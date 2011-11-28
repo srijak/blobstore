@@ -12,7 +12,7 @@ func TestBlobStore_PutGet(t *testing.T) {
 
 	ks := NewKeySpace("/blobstore.keyspace", "localhost:2181", 5e6)
 	ks.Connect()
-	ks.AddVnode(-1, host+":8080", "-1")
+	ks.AddVnode(-1, host+":8080")
 
 	b := NewBlobStore("/tmp/vnodes", ks)
 

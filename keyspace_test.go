@@ -4,7 +4,6 @@ package blobstore
 
 import (
 	"testing"
-	"fmt"
 )
 
 func TestKeySpace_AddVnode(t *testing.T) {
@@ -12,7 +11,8 @@ func TestKeySpace_AddVnode(t *testing.T) {
 	k := getKeySpace()
 	k.RemoveVnode(123)
 
-	o, err := k.AddVnode(123, "localhost:8080", "/tmp/a")
+	o, err := k.AddVnode(123, "localhost:8080")
+
 	if err != nil {
 		t.Error(err.String())
 	}
@@ -33,7 +33,7 @@ func TestKeySpace_GetVnodes(t *testing.T) {
 	}
 
 	for i := range ranges {
-		k.AddVnode(ranges[i], "localhost:8080", "/tmp/"+string(ranges[i]))
+		k.AddVnode(ranges[i], "localhost:8080")
 	}
 
 	vnodes, _ := k.GetVnodeOffsets()
@@ -75,11 +75,10 @@ func TestKeySpace_GetVnodeValue(t *testing.T) {
 
 	k.RemoveVnode(123)
 
-	dir := "/tmp/ac"
 	host := "localhost:8080"
-	exp := fmt.Sprintf("%s!%s", host, dir)
+	exp := host
 
-	_, err := k.AddVnode(123, host, dir)
+	_, err := k.AddVnode(123, host)
 	if err != nil {
 		t.Error(err.String())
 	}

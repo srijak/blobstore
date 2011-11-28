@@ -15,10 +15,10 @@ const VALUE_SEPARATOR = "!"
 
 type IKeySpace interface {
 	Connect() os.Error
-	AddVnode(offset int, host string, dir string) (name string, err os.Error)
-	GetResponsibleVnode(str string) (vnode *Vnode, err os.Error)
+	AddVnode(offset int, host string) (name string, err os.Error)
+	GetResponsibleVnode(str string) (vnode IVnode, err os.Error)
 	GetVnodeOffsets() (offsets []int, err os.Error)
-	GetVnode(offset int) (vnode *Vnode, err os.Error)
+	GetVnode(offset int) (vnode IVnode, err os.Error)
 }
 
 type KeySpace struct {
@@ -28,23 +28,33 @@ type KeySpace struct {
 	zk        *gozk.ZooKeeper
 }
 
+type IVnode interface {
+	GetHostAddress() string
+	GetDirectory() string
+	IsLocal() bool
+	String() string
+}
 type Vnode struct {
 	offset    int
 	host_addr string
 	dir       string
 }
 
-func (vn *Vnode) isLocal() bool {
+func (vn *Vnode) IsLocal() bool {
 	host, err := os.Hostname()
 	if err != nil {
 		panic(err)
 	}
-	return vn.GetHostname() == host
+
+	return strings.Split(vn.host_addr, ":")[0] == host
 }
 
-func (vn *Vnode) GetHostname() string {
-	vals := strings.Split(vn.host_addr, ":")
-	return vals[0]
+func (vn *Vnode) GetDirectory() string {
+	return vn.dir
+}
+
+func (vn *Vnode) GetHostAddress() string {
+	return vn.host_addr
 }
 
 func (vn *Vnode) String() string {
@@ -56,9 +66,8 @@ func NewVnode(offset int, node_value string) *Vnode {
 	v.offset = offset
 
 	if node_value != "" {
-		vals := strings.Split(node_value, VALUE_SEPARATOR)
-		v.host_addr = vals[0]
-		v.dir = vals[1]
+		v.host_addr = node_value
+		v.dir = fmt.Sprintf("%d", offset)
 	}
 	return v
 }
@@ -129,15 +138,10 @@ func (k *KeySpace) GetVnodeOffsets() (offsets []int, err os.Error) {
 	return ret, err
 }
 
-func (k *KeySpace) AddVnode(offset int, host string, dir string) (name string, err os.Error) {
-
-	// TODO: validate that the dir is on the local host and writeable..
-	// you need to run add vnode from the server that will
-	// have the vnode
-	//validateDir(dir)
+func (k *KeySpace) AddVnode(offset int, host string) (name string, err os.Error) {
 
 	node := k.getVnodeString(offset)
-	value := fmt.Sprintf("%s%s%s", host, VALUE_SEPARATOR, dir)
+	value := host
 
 	stat, err := k.zk.Exists(node)
 	if stat != nil {
@@ -165,7 +169,7 @@ func (k *KeySpace) GetVnodeValue(offset int) (value string, err os.Error) {
 	return data, nil
 }
 
-func (k *KeySpace) GetResponsibleVnode(str string) (vnode *Vnode, err os.Error) {
+func (k *KeySpace) GetResponsibleVnode(str string) (vnode IVnode, err os.Error) {
 	offset, err := k.GetResponsibleOffset(str)
 	if err != nil {
 		return EmptyVnode(), err
@@ -173,7 +177,7 @@ func (k *KeySpace) GetResponsibleVnode(str string) (vnode *Vnode, err os.Error) 
 	return k.GetVnode(offset)
 }
 
-func (k *KeySpace) GetVnode(offset int) (vnode *Vnode, err os.Error) {
+func (k *KeySpace) GetVnode(offset int) (vnode IVnode, err os.Error) {
 	val, err := k.GetVnodeValue(offset)
 	if err != nil {
 		return nil, err

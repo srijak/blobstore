@@ -28,17 +28,17 @@ func (b *BlobStore) Get(hash *string, blob *[]byte) os.Error {
 		return err
 	}
 
-	if resp_vnode.isLocal() {
+	if resp_vnode.IsLocal() {
 		l4g.Debug("Get. [%s] hash is local.", *hash)
-		*blob, err = b.getBlob(resp_vnode.dir, *hash)
+		*blob, err = b.getBlob(resp_vnode.GetDirectory(), *hash)
 		if err != nil {
 			return err
 		}
 
 	} else {
 
-		l4g.Info("Making rpc call to retrieve from relevant remote server [%s]", resp_vnode.host_addr)
-		return b.getRemoteBlob(hash, blob, resp_vnode.host_addr)
+		l4g.Info("Making rpc call to retrieve from relevant remote server [%s]", resp_vnode.GetHostAddress())
+		return b.getRemoteBlob(hash, blob, resp_vnode.GetHostAddress())
 	}
 	return nil
 }
@@ -50,15 +50,15 @@ func (b *BlobStore) Put(blob *[]byte, hash *string) os.Error {
 		return err
 	}
 
-	if resp_vnode.isLocal() {
+	if resp_vnode.IsLocal() {
 		l4g.Info("Put. [%s] hash is local.", *hash)
-		err := b.storeBlob(resp_vnode.dir, *hash, blob)
+		err := b.storeBlob(resp_vnode.GetDirectory(), *hash, blob)
 		if err != nil {
 			return err
 		}
 	} else {
-		l4g.Info("Making rpc call to add to relevant remote server [%s]", resp_vnode.host_addr)
-		return b.storeRemoteBlob(blob, hash, resp_vnode.host_addr)
+		l4g.Info("Making rpc call to add to relevant remote server [%s]", resp_vnode.GetHostAddress())
+		return b.storeRemoteBlob(blob, hash, resp_vnode.GetHostAddress())
 	}
 	return nil
 }
