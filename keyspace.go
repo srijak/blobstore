@@ -14,8 +14,9 @@ import (
 const VALUE_SEPARATOR = "!"
 
 type IKeySpace interface {
-	Connect() os.Error
+	Connect() (err os.Error)
 	AddVnode(offset int, host string) (name string, err os.Error)
+	RemoveVnode(offset int) (err os.Error)
 	GetResponsibleVnode(str string) (vnode IVnode, err os.Error)
 	GetVnodeOffsets() (offsets []int, err os.Error)
 	GetVnode(offset int) (vnode IVnode, err os.Error)
@@ -91,7 +92,7 @@ func NewKeySpace(rootNode string, servers string, timeout int64) *KeySpace {
 	return k
 }
 
-func (k *KeySpace) Connect() os.Error {
+func (k *KeySpace) Connect() (err os.Error) {
 	zk, session, err := gozk.Init(k.zkServers, k.zkTimeout)
 	if err != nil {
 		return os.NewError("Couldn't connect: " + err.String())
