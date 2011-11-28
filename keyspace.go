@@ -14,7 +14,11 @@ import (
 const VALUE_SEPARATOR = "!"
 
 type IKeySpace interface {
-
+	Connect() os.Error
+	AddVnode(offset int, host string, dir string) (name string, err os.Error)
+	GetResponsibleVnode(str string) (vnode *Vnode, err os.Error)
+	GetVnodeOffsets() (offsets []int, err os.Error)
+	GetVnode(offset int) (vnode *Vnode, err os.Error)
 }
 
 type KeySpace struct {
@@ -43,6 +47,10 @@ func (vn *Vnode) GetHostname() string {
 	return vals[0]
 }
 
+func (vn *Vnode) String() string {
+	return fmt.Sprintf("%d@%s:%s", vn.offset, vn.host_addr, vn.dir)
+}
+
 func NewVnode(offset int, node_value string) *Vnode {
 	v := new(Vnode)
 	v.offset = offset
@@ -58,6 +66,7 @@ func NewVnode(offset int, node_value string) *Vnode {
 func EmptyVnode() *Vnode {
 	return new(Vnode)
 }
+
 func NewKeySpace(rootNode string, servers string, timeout int64) *KeySpace {
 	if rootNode == "" {
 		rootNode = "/blobstore.keyspace"
@@ -74,7 +83,7 @@ func NewKeySpace(rootNode string, servers string, timeout int64) *KeySpace {
 }
 
 func (k *KeySpace) Connect() os.Error {
-	zk, session, err := gozk.Init("localhost:2181", k.zkTimeout)
+	zk, session, err := gozk.Init(k.zkServers, k.zkTimeout)
 	if err != nil {
 		return os.NewError("Couldn't connect: " + err.String())
 	}

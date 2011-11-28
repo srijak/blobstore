@@ -8,10 +8,13 @@ import (
 
 func TestBlobStore_PutGet(t *testing.T) {
 	SetZooKeeperLogLevel(0)
-	b := NewBlobStore("/tmp/vnodes", "localhost:2181")
 	host, _ := os.Hostname()
 
-	b.ks.AddVnode(-1, host+":8080", "-1")
+	ks := NewKeySpace("/blobstore.keyspace", "localhost:2181", 5e6)
+	ks.Connect()
+	ks.AddVnode(-1, host+":8080", "-1")
+
+	b := NewBlobStore("/tmp/vnodes", ks)
 
 	blob := &[]byte("srijak")
 	hash := new(string)

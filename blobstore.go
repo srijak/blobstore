@@ -10,13 +10,13 @@ import (
 )
 
 type BlobStore struct {
-	ks      *KeySpace
+	ks      IKeySpace
 	rootDir string
 }
 
-func NewBlobStore(root string, zkHosts string) *BlobStore {
+func NewBlobStore(root string, ks IKeySpace) *BlobStore {
 	b := new(BlobStore)
-	b.ks = NewKeySpace("/blobstore.keyspace", zkHosts, 5e6) //TODO: configurable
+	b.ks = ks
 	b.ks.Connect()
 	b.rootDir = root
 	return b
