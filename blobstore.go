@@ -2,132 +2,152 @@ package blobstore
 
 import (
 	"os"
-	"fmt"
-	"path/filepath"
-	"io/ioutil"
 	l4g "log4go.googlecode.com/hg"
-	"rpc"
+	"rand"
+	//	"fmt"
 )
 
-type BlobStore struct {
-	ks      IKeySpace
-	rootDir string
+type IBlobStore interface {
+	Put(blob *[]byte, key *string) os.Error
+	Get(key *string, blob *[]byte) os.Error
 }
 
-func NewBlobStore(root string, ks IKeySpace) *BlobStore {
-	b := new(BlobStore)
-	b.ks = ks
+type BlobStore struct {
+	ks   IKeySpace
+	rs   IReplicationStrategy
+	ls   ILocalStore
+	rsf  IRemoteStoreFactory
+	port int
+}
+
+func NewBlobStore(ks IKeySpace,
+rs IReplicationStrategy,
+ls ILocalStore,
+rsf IRemoteStoreFactory,
+port int) *BlobStore {
+
+	b := &BlobStore{ks: ks, rs: rs, ls: ls, rsf: rsf, port: port}
 	b.ks.Connect()
-	b.rootDir = root
 	return b
 }
 
-func (b *BlobStore) Get(hash *string, blob *[]byte) os.Error {
-	resp_vnode, err := b.ks.GetResponsibleVnode(*hash)
+func (b *BlobStore) Get(key *string, blob *[]byte) os.Error {
+	// get replica list
+	// TODO: remove servers that aren't currently up.
+	// If we are in the replica list:
+	//    return data
+	//      if data not available locally, get data from other replicas
+	//        (readrepair: store locally so next time we can field the request)
+	// If not on us:
+	//    hit one of the replicas for data, it will find and return data.
+	vnodes, err := b.ks.GetVnodes()
 	if err != nil {
 		return err
 	}
-
-	if resp_vnode.IsLocal() {
-		l4g.Debug("Get. [%s] hash is local.", *hash)
-		*blob, err = b.getBlob(resp_vnode.GetDirectory(), *hash)
-		if err != nil {
-			return err
+	replicas, err := b.rs.Replicas(*key, vnodes)
+	if err != nil {
+		return err
+	}
+	copyLocally := false
+	for i := range replicas {
+		// look for a local one first.
+		if isLocalVnode(replicas[i]) {
+			*blob, err = b.ls.Get(*key, replicas[i])
+			if err != nil {
+				// err is assumed to be coz data was missing.
+				// so, copy it locally once we get it.
+				copyLocally = true
+			} else {
+				// if no errors getting data locally,
+				// we are done
+				//TODO: verify data: 
+				//if hash doesn't match, get it from another replica.
+				return nil
+			}
 		}
+	}
+	// the fact that we are here means data wasn't found locally.
+	// if copyLocally is true, it means that we should store
+	// the data locally coz it should have been here.
 
-	} else {
-
-		l4g.Info("Making rpc call to retrieve from relevant remote server [%s]", resp_vnode.GetHostAddress())
-		return b.getRemoteBlob(hash, blob, resp_vnode.GetHostAddress())
+	idx := rand.Intn(len(replicas))
+	err = b.getRemoteBlob(key, blob, replicas[idx])
+	if err != nil {
+		//TODO: could try others.
+		return err
+	}
+	if copyLocally {
+		go b.ls.Put(blob, *key, replicas[idx])
 	}
 	return nil
 }
 
-func (b *BlobStore) Put(blob *[]byte, hash *string) os.Error {
-	*hash = getHash(blob)
-	resp_vnode, err := b.ks.GetResponsibleVnode(*hash)
+func (b *BlobStore) getRemoteBlob(key *string, blob *[]byte, vn IVnode) os.Error {
+
+	r, err := b.rsf.GetClient(vn.GetHostname(), b.port)
 	if err != nil {
 		return err
 	}
 
-	if resp_vnode.IsLocal() {
-		l4g.Info("Put. [%s] hash is local.", *hash)
-		err := b.storeBlob(resp_vnode.GetDirectory(), *hash, blob)
-		if err != nil {
-			return err
+	return r.Get(key, blob)
+}
+
+func (b *BlobStore) putRemoteBlob(blob *[]byte, key *string, vn IVnode) os.Error {
+
+	r, err := b.rsf.GetClient(vn.GetHostname(), b.port)
+	if err != nil {
+		return err
+	}
+
+	return r.Put(blob, key)
+}
+
+func isLocalVnode(vn IVnode) bool {
+	h, err := os.Hostname()
+	if err != nil {
+		l4g.Warn("Couldn't get os.Hostname: %s", err.String())
+		return false
+	}
+	return vn.GetHostname() == h
+}
+
+func (b *BlobStore) Put(blob *[]byte, key *string) (err os.Error) {
+	// TODO: get and put are very similiar. Refactor to reuse logic
+	vnodes, err := b.ks.GetVnodes()
+	if err != nil {
+		return err
+	}
+	*key = getHash(blob)
+	replicas, err := b.rs.Replicas(*key, vnodes)
+	if err != nil {
+		return err
+	}
+	for i := range replicas {
+		// look for a local one first.
+		if isLocalVnode(replicas[i]) {
+			err := b.ls.Put(blob, *key, replicas[i])
+			if err != nil {
+				// local put failed for some reason.
+				// TODO: how to handle?
+				return err
+			} else {
+				// if no errors getting data locally,
+				// we are done
+				//TODO: verify data: 
+				//if hash doesn't match, get it from another replica.
+
+				return nil
+			}
 		}
-	} else {
-		l4g.Info("Making rpc call to add to relevant remote server [%s]", resp_vnode.GetHostAddress())
-		return b.storeRemoteBlob(blob, hash, resp_vnode.GetHostAddress())
 	}
-	return nil
-}
-
-func (b *BlobStore) storeRemoteBlob(blob *[]byte, hash *string, server string) os.Error {
-	conn, err := rpc.DialHTTP("tcp", server)
+	// the fact that we are here means it's not a local put.
+	// choose a random replica
+	idx := rand.Intn(len(replicas))
+	err = b.putRemoteBlob(blob, key, replicas[idx])
 	if err != nil {
+		//TODO: could try others.
 		return err
 	}
 
-	return conn.Call("BlobStore.Put", blob, hash)
-}
-
-func (b *BlobStore) storeBlob(location, name string, blob *[]byte) os.Error {
-	dir_path, full_path := b.buildBlobPath(location, name)
-	if filepath.HasPrefix(b.rootDir, full_path) {
-		msg := fmt.Sprintf("Base path[%s] of vnode wasn't the root dir[%s]", full_path, b.rootDir)
-		return os.NewError(msg)
-	}
-
-	l4g.Info("Storing blob under: %s", full_path)
-	err := os.MkdirAll(dir_path, 0700)
-	if err != nil {
-		return err
-	}
-
-	_, err = os.Stat(full_path)
-	if err == nil {
-		// blob with same name exists.
-		// means we are done.
-		// TODO: check to verify size of the blobs are same
-		//       and log that we tried to add existing blob.
-		l4g.Info("Blob already exists at %s", full_path)
-		return nil
-	}
-	return ioutil.WriteFile(full_path, *blob, 0600)
-
-}
-
-func (b *BlobStore) getBlob(location, name string) ([]byte, os.Error) {
-	_, full_path := b.buildBlobPath(location, name)
-	if filepath.HasPrefix(b.rootDir, full_path) {
-		msg := fmt.Sprintf("Base path[%s] of vnode wasn't the root dir[%s]", full_path, b.rootDir)
-		return nil, os.NewError(msg)
-	}
-
-	l4g.Info("Getting blob from: %s", full_path)
-
-	_, err := os.Stat(full_path)
-	if err != nil {
-		msg := fmt.Sprintf("Blob not found under: %s", full_path)
-		return nil, os.NewError(msg)
-	}
-	return ioutil.ReadFile(full_path)
-
-}
-
-func (b *BlobStore) getRemoteBlob(hash *string, blob *[]byte, server string) os.Error {
-	conn, err := rpc.DialHTTP("tcp", server)
-	if err != nil {
-		return err
-	}
-	return conn.Call("BlobStore.Get", hash, blob)
-}
-
-func (b *BlobStore) buildBlobPath(location, name string) (dir, file string) {
-	// ignores the 4th char (assumes it the separator between algo name and
-	// hash
-	return filepath.Clean(filepath.Join(b.rootDir, location, name[0:4], name[5:8], name[8:11])),
-		filepath.Clean(filepath.Join(b.rootDir, location, name[0:4], name[5:8], name[8:11], name))
-
+	return err
 }

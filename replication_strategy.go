@@ -28,8 +28,7 @@ func (r *SimpleRep) Replicas(key string, allVnodes VnodeArray) (VnodeArray, os.E
 	hash := int(hasher.Sum32())
 
 	start_idx := SearchVnode(allVnodes, hash)
-
-	for i := start_idx; len(replicas) <= r.N; i++ {
+	for i := start_idx; len(replicas) < r.N; i++ {
 		idx := i % len(allVnodes)
 		replicas = append(replicas, allVnodes[idx])
 	}

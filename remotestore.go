@@ -6,6 +6,22 @@ import (
 	"rpc"
 )
 
+type IRemoteStore interface {
+	Put(blob *[]byte, key *string) os.Error
+	Get(key *string, blob *[]byte) os.Error
+}
+
+type IRemoteStoreFactory interface {
+	GetClient(hostname string, port int) (IRemoteStore, os.Error)
+}
+
+type RemoteStoreFactory struct{}
+
+func (r *RemoteStoreFactory) GetClient(hostname string, port int) (IRemoteStore, os.Error) {
+	//cache etcs later, if reqd.
+	return NewRemoteStore(hostname, port)
+}
+
 type RemoteStore struct {
 	client *rpc.Client
 	host   string

@@ -8,5 +8,6 @@ GOFILES=\
 	replication_strategy.go\
 	localstore.go\
 	remotestore.go\
+	blobstore.go\
 
 include $(GOROOT)/src/Make.pkg

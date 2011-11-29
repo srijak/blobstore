@@ -10,7 +10,7 @@ func (s *Unit) TestReplicas(c *C) {
 	for i := range offsets {
 		vnodes = append(vnodes, &Vnode{offset: offsets[i]})
 	}
-	r := &SimpleRep{N: 2}
+	r := &SimpleRep{N: 3}
 	key := "sha1-1234" //hash is 531291731
 
 	expected_replicas := [...]int{5e8, 6e8, -1e3}
