@@ -3,22 +3,21 @@ package blobstore
 // expects zookeeper to be running  on localhost:2181
 
 import (
-	"testing"
+	. "launchpad.net/gocheck"
 	"sort"
 	"fmt"
 )
 
-func Test_AddRemoveVnode(t *testing.T) {
+func (s *Integration) Test_AddRemoveVnode(c *C) {
 	ks := getTestKeySpace()
 	vnode := &Vnode{offset: -1, hostname: "abcd"}
 
 	ks.AddVnode(vnode)
 	err := ks.RemoveVnode(vnode)
-	if err != nil {
-		t.Errorf("No error expected. got %q", err)
-	}
+	c.Assert(err, IsNil)
 }
-func Test_GetVnodes(t *testing.T) {
+
+func (s *Integration) Test_GetVnodes(c *C) {
 	ks := getTestKeySpace()
 	offsets := [...]int{10, 20, -10, -1, 0, 500}
 	for i := range offsets {
@@ -28,18 +27,10 @@ func Test_GetVnodes(t *testing.T) {
 	}
 
 	vnodes, err := ks.GetVnodes()
-	if err != nil {
-		t.Errorf("No error expected. got %q", err)
-	}
+	c.Check(err, IsNil)
 
-	if !sort.IsSorted(vnodes) {
-		t.Error("GetVnodes did not return a sorted list.")
-	}
-	e := len(offsets)
-	o := len(vnodes)
-	if e != o {
-		t.Errorf("GetVnodes did not return the correct number of vnodes. Expected %d, got %d", e, o)
-	}
+	c.Assert(sort.IsSorted(vnodes), Equals, true)
+	c.Assert(len(offsets), Equals, len(vnodes))
 }
 
 func getTestKeySpace() IKeySpace {

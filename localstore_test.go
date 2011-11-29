@@ -1,15 +1,14 @@
 package blobstore
 
 import (
-	"testing"
+	. "launchpad.net/gocheck"
 	"io/ioutil"
 )
 
-func TestPutGet(t *testing.T) {
+func (s *Unit) TestPutGet(c *C) {
 	tmp_dir, err := ioutil.TempDir("", "localstore_test")
-	if err != nil {
-		t.Error(err.String())
-	}
+	c.Check(err, IsNil)
+
 	blob := &[]byte("srijak")
 	vn, _ := NewVnodeFromString("-1@abcd")
 
@@ -17,18 +16,13 @@ func TestPutGet(t *testing.T) {
 	ds.Put(blob, getHash(blob), vn)
 
 	got, err := ds.Get(getHash(blob), vn)
-	if err != nil {
-		t.Errorf("Unexpected error: %s", err.String())
-	}
-	if string(got) != string(*blob) {
-		t.Errorf("Got: %s. Expected: %s", string(got), string(*blob))
-	}
+	c.Check(err, IsNil)
+	c.Assert(string(got), Equals, string(*blob))
 }
-func TestPut_NotUnderRootDir(t *testing.T) {
+func (s *Unit) TestPut_NotUnderRootDir_ReturnsError(c *C) {
 	tmp_dir, err := ioutil.TempDir("", "localstore_test")
-	if err != nil {
-		t.Error(err.String())
-	}
+	c.Check(err, IsNil)
+
 	blob := &[]byte("srijak")
 	vn, _ := NewVnodeFromString("-1@abcd")
 
@@ -36,22 +30,17 @@ func TestPut_NotUnderRootDir(t *testing.T) {
 
 	err = ds.Put(blob, "../../../tmp/sha1.blah", vn)
 
-	if err == nil {
-		t.Error("Expected error since we tried to put data above rootDir. But, got no error.")
-	}
+	c.Assert(err, Not(IsNil))
 }
-func TestGet_NonExistantBlob(t *testing.T) {
+func (s *Unit) TestGet_NonExistantBlob_ReturnsError(c *C) {
 	tmp_dir, err := ioutil.TempDir("", "localstore_test")
-	if err != nil {
-		t.Error(err.String())
-	}
+	c.Check(err, IsNil)
+
 	blob := &[]byte("srijak")
 	vn, _ := NewVnodeFromString("-1@abcd")
 
 	ds := NewDiskStore(tmp_dir)
 
-	got, err := ds.Get(getHash(blob), vn)
-	if err == nil {
-		t.Errorf("Expected error since blob doesn't exist. But, got no error. Got blob: %s", string(got))
-	}
+	_, err = ds.Get(getHash(blob), vn)
+	c.Assert(err, Not(IsNil))
 }

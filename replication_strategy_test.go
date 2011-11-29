@@ -1,11 +1,10 @@
 package blobstore
 
 import (
-	"testing"
-	//	"fmt"
+	. "launchpad.net/gocheck"
 )
 
-func TestReplicas(t *testing.T) {
+func (s *Unit) TestReplicas(c *C) {
 	offsets := [...]int{-1e3, 100, 1e4, 1e6, 5e8, 6e8}
 	vnodes := make(VnodeArray, 0)
 	for i := range offsets {
@@ -17,17 +16,13 @@ func TestReplicas(t *testing.T) {
 	expected_replicas := [...]int{5e8, 6e8, -1e3}
 	o, _ := r.Replicas(key, vnodes)
 
-	if len(expected_replicas) != len(o) {
-		t.Errorf("Got %d replicas. Expected: %d", len(o), len(expected_replicas))
-	}
+	c.Assert(len(expected_replicas), Equals, len(o))
+
 	for i := range expected_replicas {
-		offset := o[i].GetOffset()
-		if offset != expected_replicas[i] {
-			t.Errorf("Got: %d as replication offset. Expected: %d", offset, expected_replicas[i])
-		}
+		c.Assert(o[i].GetOffset(), Equals, expected_replicas[i])
 	}
 }
-func TestReplicas_NumVnodesLessThatReplicationFactor(t *testing.T) {
+func (s *Unit) TestReplicas_NumVnodesLessThatReplicationFactor(c *C) {
 	offsets := [...]int{-50, -40, -30, -20}
 	vnodes := make(VnodeArray, 0)
 	for i := range offsets {
@@ -36,7 +31,6 @@ func TestReplicas_NumVnodesLessThatReplicationFactor(t *testing.T) {
 	r := &SimpleRep{N: len(vnodes) + 1}
 	hash := "sha1-1234"
 	_, err := r.Replicas(hash, vnodes)
-	if err == nil {
-		t.Errorf("Got: No error. Expected: Error because num vnodes < replication factor")
-	}
+
+	c.Assert(err, Not(IsNil))
 }

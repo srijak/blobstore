@@ -1,58 +1,46 @@
 package blobstore
 
-import "testing"
+import (
+	. "launchpad.net/gocheck"
+)
 
-func TestNewVnodeFromString(t *testing.T) {
+func (s *Unit) TestNewVnodeFromString(c *C) {
 	i := "-2342@abcd"
 	o, err := NewVnodeFromString(i)
-	if err != nil {
-		t.Errorf("Unexpected error: %q", err)
-	}
+	c.Check(err, IsNil)
+
 	expectedOffset := -2342
 	expectedHostname := "abcd"
 
-	if o.GetOffset() != expectedOffset {
-		t.Errorf("%q expected. got %q", o.GetOffset(), expectedOffset)
-	}
-	if o.GetHostname() != expectedHostname {
-		t.Errorf("%q expected. got %q", o.GetHostname(), expectedHostname)
-	}
+	c.Assert(o.GetOffset(), Equals, expectedOffset)
+	c.Assert(o.GetHostname(), Equals, expectedHostname)
 }
 
-func TestNewVnodeFromString_NonIntOffset(t *testing.T) {
+func (s *Unit) TestNewVnodeFromString_NonIntOffset(c *C) {
 	i := "qwe@abcd"
 	_, err := NewVnodeFromString(i)
 
-	if err == nil {
-		t.Error("Should have returned error.")
-	}
+	c.Assert(err, Not(IsNil))
 }
-func TestNewVnodeFromString_MissingOffset(t *testing.T) {
+
+func (s *Unit) TestNewVnodeFromString_MissingOffset(c *C) {
 	i := "@abcd"
 	_, err := NewVnodeFromString(i)
 
-	if err == nil {
-		t.Error("Should have returned error.")
-	}
+	c.Assert(err, Not(IsNil))
 }
 
-func TestNewVnodeFromString_NoAtSign(t *testing.T) {
+func (s *Unit) TestNewVnodeFromString_NoAtSign(c *C) {
 	i := "qweabcd"
 	_, err := NewVnodeFromString(i)
 
-	if err == nil {
-		t.Error("Should have returned error.")
-	}
+	c.Assert(err, Not(IsNil))
 }
 
-func TestNewVnodeFromString_to_String(t *testing.T) {
+func (s *Unit) TestNewVnodeFromString_to_String(c *C) {
 	i := "-2342@abcd"
 	o, err := NewVnodeFromString(i)
-	if err != nil {
-		t.Errorf("Unexpected error: %q", err)
-	}
-	e := i
-	if o.String() != e {
-		t.Errorf("%q expected. got %q", e, o)
-	}
+
+	c.Check(err, IsNil)
+	c.Assert(o.String(), Equals, i)
 }
