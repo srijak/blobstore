@@ -1,99 +1,49 @@
 package blobstore
 
-// expects zookeeper running on localhost:2181
+// expects zookeeper to be running  on localhost:2181
 
 import (
 	"testing"
+	"sort"
+	"fmt"
 )
 
-func TestKeySpace_AddVnode(t *testing.T) {
-	// delete node, if it already exists
-	k := getKeySpace()
-	k.RemoveVnode(123)
+func Test_AddRemoveVnode(t *testing.T) {
+	ks := getTestKeySpace()
+	vnode := &Vnode{offset: -1, hostname: "abcd"}
 
-	o, err := k.AddVnode(123, "localhost:8080")
-
+	ks.AddVnode(vnode)
+	err := ks.RemoveVnode(vnode)
 	if err != nil {
-		t.Error(err.String())
-	}
-
-	e := k.zkRoot + "/123"
-	if o != e {
-		t.Errorf("%q expected. got %q", e, o)
+		t.Errorf("No error expected. got %q", err)
 	}
 }
-
-func TestKeySpace_GetVnodes(t *testing.T) {
-
-	k := getKeySpace()
-	ranges := [...]int{123, 345, 456, 678, 91011}
-	for i := range ranges {
-		// delete node, if it already exists
-		k.RemoveVnode(ranges[i])
+func Test_GetVnodes(t *testing.T) {
+	ks := getTestKeySpace()
+	offsets := [...]int{10, 20, -10, -1, 0, 500}
+	for i := range offsets {
+		vnode := &Vnode{offset: offsets[i], hostname: fmt.Sprintf("abcd%d", offsets[i])}
+		ks.AddVnode(vnode)
+		defer ks.RemoveVnode(vnode)
 	}
 
-	for i := range ranges {
-		k.AddVnode(ranges[i], "localhost:8080")
+	vnodes, err := ks.GetVnodes()
+	if err != nil {
+		t.Errorf("No error expected. got %q", err)
 	}
 
-	vnodes, _ := k.GetVnodeOffsets()
-	// ugh. why doesn't go have a set ds?
-	// for now testing by count will ahve to suffice
-	e := len(ranges)
+	if !sort.IsSorted(vnodes) {
+		t.Error("GetVnodes did not return a sorted list.")
+	}
+	e := len(offsets)
 	o := len(vnodes)
-
-	//cleanup
-	for i := range ranges {
-		k.RemoveVnode(ranges[i])
-	}
-
-	if o != e {
-		t.Errorf("%d vnodes expected. But got %d", e, o)
-		for i := range vnodes {
-			t.Error(vnodes[i])
-		}
-	}
-
-}
-
-func TestKeySpace_GetResponsibleOffsetHelper(t *testing.T) {
-	k := getKeySpace()
-	offsets := [...]int{-20, -10, 0, 30, 50, 100}
-	tests := [...]int{-21, -19, 5, 35, 1001, 7, -20, -10, 0, 30, 50, 100}
-	expected := [...]int{100, -20, 0, 30, 100, 0, -20, -10, 0, 30, 50, 100}
-
-	for i := range tests {
-		o := k.getResponsibleOffsetHelper(tests[i], offsets[:])
-		if offsets[o] != expected[i] {
-			t.Errorf("%d. got: %d. expected: %d\n", tests[i], offsets[o], expected[i])
-		}
+	if e != o {
+		t.Errorf("GetVnodes did not return the correct number of vnodes. Expected %d, got %d", e, o)
 	}
 }
 
-func TestKeySpace_GetVnodeValue(t *testing.T) {
-	k := getKeySpace()
-
-	k.RemoveVnode(123)
-
-	host := "localhost:8080"
-	exp := host
-
-	_, err := k.AddVnode(123, host)
-	if err != nil {
-		t.Error(err.String())
-	}
-
-	out, err := k.GetVnodeValue(123)
-	if err != nil {
-		t.Error(err.String())
-	}
-	if out != exp {
-		t.Errorf("%q expected as vnode value. Got %q", exp, out)
-	}
-}
-
-func getKeySpace() *KeySpace {
-	k := NewKeySpace("/keyspacetest", "localhost:2181", 5e6)
+func getTestKeySpace() IKeySpace {
+	k := NewKeySpace("/keyspacetest", "localhost:2181", 5e3)
 	SetZooKeeperLogLevel(0)
 
 	err := k.Connect()
