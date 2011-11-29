@@ -1,14 +1,9 @@
 package blobstore
 
 import (
-	"testing"
-	//	"fmt"
+	. "launchpad.net/gocheck"
 )
 
-type TestKeyspace struct {
-
-}
-
-func TestBlobPutGet(t *testing.T) {
-	//	bs := NewBlobStore((
+func (s *Unit) TestBlobPutGet(c *C) {
+	c.Skip("TODO")
 }
