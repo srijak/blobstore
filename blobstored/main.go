@@ -19,10 +19,11 @@ import (
 var confFile *string = flag.String("c", "blobstored.conf", "configuration file")
 
 type ConfigOpts struct {
-	ZkHosts    string
-	ZkRootNode string
-	RootDir    string
-	Port       int
+	ZkHosts           string
+	ZkRootNode        string
+	RootDir           string
+	Port              int
+	ReplicationFactor int
 }
 
 func loadConfigs() *ConfigOpts {
@@ -121,7 +122,7 @@ func getKeySpace(configs *ConfigOpts) IKeySpace {
 func daemonize(configs *ConfigOpts) os.Error {
 	ks := NewKeySpace(configs.ZkRootNode, configs.ZkHosts, 5e6)
 	ks.Connect()
-	rs := &SimpleRep{N: 2}
+	rs := &SimpleRep{N: configs.ReplicationFactor}
 	ls := NewDiskStore(configs.RootDir)
 	rsf := &RemoteStoreFactory{}
 	b := NewBlobStore(ks, rs, ls, rsf, configs.Port)
