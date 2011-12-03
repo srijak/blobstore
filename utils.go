@@ -6,7 +6,7 @@ import (
 	"sort"
 )
 
-func getHash(blob *[]byte) string {
+func GetHash(blob *[]byte) string {
 	sha1 := sha1.New()
 	sha1.Write(*blob)
 	return fmt.Sprintf("sha1-%x", sha1.Sum())

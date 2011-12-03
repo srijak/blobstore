@@ -13,9 +13,9 @@ func (s *Unit) TestPutGet(c *C) {
 	vn, _ := NewVnodeFromString("-1@abcd")
 
 	ds := NewDiskStore(tmp_dir)
-	ds.Put(blob, getHash(blob), vn)
+	ds.Put(blob, GetHash(blob), vn)
 
-	got, err := ds.Get(getHash(blob), vn)
+	got, err := ds.Get(GetHash(blob), vn)
 	c.Check(err, IsNil)
 	c.Assert(string(got), Equals, string(*blob))
 }
@@ -41,6 +41,6 @@ func (s *Unit) TestGet_NonExistantBlob_ReturnsError(c *C) {
 
 	ds := NewDiskStore(tmp_dir)
 
-	_, err = ds.Get(getHash(blob), vn)
+	_, err = ds.Get(GetHash(blob), vn)
 	c.Assert(err, Not(IsNil))
 }

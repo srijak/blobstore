@@ -11,7 +11,7 @@ func (s *Unit) TestBlobGet_isLocal_FoundLocally(c *C) {
 	bs := getTestBlobStore()
 
 	blob := []byte("srijak") // hash: 929845509
-	key := getHash(&blob)
+	key := GetHash(&blob)
 
 	// put data into local vnode using ILocalStore
 	hostname, _ := os.Hostname()
@@ -33,7 +33,7 @@ func (s *Unit) TestBlobGet_isLocal_NotFoundLocally(c *C) {
 	bs := getTestBlobStore()
 
 	blob := []byte("srijak") // hash: 929845509
-	key := getHash(&blob)
+	key := GetHash(&blob)
 
 	// put blob on remote replica node
 	rc, err := bs.rsf.GetClient("notus1", bs.port)

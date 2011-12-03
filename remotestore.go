@@ -41,5 +41,5 @@ func (rs *RemoteStore) Put(blob *[]byte, key *string) os.Error {
 }
 
 func (rs *RemoteStore) Get(key *string, blob *[]byte) os.Error {
-	return rs.client.Call("BloblStore.Get", key, blob)
+	return rs.client.Call("BlobStore.Get", key, blob)
 }

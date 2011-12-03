@@ -41,7 +41,7 @@ func (s *Unit) TestVnodeArray_Sort(c *C) {
 
 func (s *Unit) TestGetHash_PrependAlgoToHash(c *C) {
 	i := []byte("srijak")
-	o := getHash(&i)
+	o := GetHash(&i)
 	e := "sha1-c57deab7027fd806240c33324947c5b184e60adf"
 	c.Assert(o, Equals, e)
 }

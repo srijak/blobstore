@@ -136,7 +136,7 @@ func (b *BlobStore) Put(blob *[]byte, key *string) (err os.Error) {
 	if err != nil {
 		return err
 	}
-	*key = getHash(blob)
+	*key = GetHash(blob)
 	replicas, err := b.rs.Replicas(*key, vnodes)
 	if err != nil {
 		return err
