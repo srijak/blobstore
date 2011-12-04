@@ -7,7 +7,7 @@ This is what you use to run/manage a blobserver.
 
 #### To start up a blobserver:
 
-    bsd -c configfile daemonize
+    bsd -c configfile serve
 
 #### To add a new vnode on the localmachine starting at offset -121 [0]
 
