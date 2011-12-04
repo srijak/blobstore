@@ -9,11 +9,11 @@ This is what you use to run/manage a blobserver.
 
     bsd -c configfile serve
 
-#### To add a new vnode on the localmachine starting at offset -121 [0]
+#### Add vnode at offset -121 [0]
 
     bsd -c configfile add-vnode -121
 
-#### To remove the vnode with offset from the local machine [0]
+#### Remove vnode with offset [0]
 
     bsd -c configfile rm-vnode -121
 
@@ -29,6 +29,7 @@ This is what you use to run/manage a blobserver.
 <br/>
 
 
-[0] These actions just remove the vnodes from zookeeper. You actual data is
-still available under RootDir( as defined in your config file)/<vnodeoffset>
+[0] These actions just add/remove the vnode to/from zookeeper. You actual data is
+still available under RootDir( as defined in your config file)/<vnodeoffset>.
+Also, the vnode's primary location will be the local machine.
 
