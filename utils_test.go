@@ -11,11 +11,11 @@ func (s *Unit) TestSearchVnodes(c *C) {
 	expected := [...]int{100, -20, 0, 30, 100, 0, -20, -10, 0, 30, 50, 100}
 
 	vnodes := make(VnodeArray, 0)
-	for i := range offsets {
-		vnodes = append(vnodes, &Vnode{offset: offsets[i]})
+	for _, offset := range offsets {
+		vnodes = append(vnodes, &Vnode{offset: offset})
 	}
-	for i := range tests {
-		idx := SearchVnode(vnodes, tests[i])
+	for i, testcase := range tests {
+		idx := SearchVnode(vnodes, testcase)
 		o := vnodes[idx].GetOffset()
 		c.Assert(o, Equals, expected[i])
 	}
@@ -33,9 +33,9 @@ func (s *Unit) TestVnodeArray_Sort(c *C) {
 	}
 	sort.Sort(&vnodes)
 	prev := -5000 // item smaller than all items in list
-	for i := range vnodes {
-		c.Check(vnodes[i].GetOffset() >= prev, Equals, true)
-		prev = vnodes[i].GetOffset()
+	for _, vn := range vnodes {
+		c.Check(vn.GetOffset() >= prev, Equals, true)
+		prev = vn.GetOffset()
 	}
 }
 

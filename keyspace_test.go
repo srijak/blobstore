@@ -20,8 +20,8 @@ func (s *Integration) Test_AddRemoveVnode(c *C) {
 func (s *Integration) Test_GetVnodes(c *C) {
 	ks := getTestKeySpace()
 	offsets := [...]int{10, 20, -10, -1, 0, 500}
-	for i := range offsets {
-		vnode := &Vnode{offset: offsets[i], hostname: fmt.Sprintf("abcd%d", offsets[i])}
+	for i, o := range offsets {
+		vnode := &Vnode{offset: offsets[i], hostname: fmt.Sprintf("abcd%d", o)}
 		ks.AddVnode(vnode)
 		defer ks.RemoveVnode(vnode)
 	}

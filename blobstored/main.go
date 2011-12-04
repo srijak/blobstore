@@ -101,8 +101,8 @@ func lsVnodes(configs *ConfigOpts) os.Error {
 	}
 
 	fmt.Printf("There are %d vnodes.\n", len(vnodes))
-	for i := range vnodes {
-		fmt.Printf("%s\n", vnodes[i].String())
+	for _, vn := range vnodes {
+		fmt.Printf("%s\n", vn.String())
 	}
 	return nil
 }

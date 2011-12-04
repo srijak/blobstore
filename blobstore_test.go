@@ -112,9 +112,9 @@ func (s *Unit) TestBlobPut_isRemote_StoredRemotely(c *C) {
 
 	// wait a sec for go routines to put data on all replicas
 	time.Sleep(1e9)
-	for i := range replicas {
+	for _, replica := range replicas {
 		var got []byte
-		rc, err := bs.rsf.GetClient(replicas[i].GetHostname(), bs.port)
+		rc, err := bs.rsf.GetClient(replica.GetHostname(), bs.port)
 		err = rc.Get(&key, &got)
 		c.Check(err, IsNil)
 		c.Assert(string(got), Equals, string(blob))

@@ -48,18 +48,18 @@ func (b *BlobStore) Get(key *string, blob *[]byte) os.Error {
 	}
 	copyLocally := false
 	var local_vnode_idx int
-	for i := range replicas {
+	for i, replica := range replicas {
 		// look for a local one first.
 
-		if isLocalVnode(replicas[i]) {
+		if isLocalVnode(replica) {
 			// this code assumes that there is only one matching local vnode.
 			// i.e that replicas aren't on the same server.
-			l4g.Debug("Key should be on local vnode: %s", replicas[i])
-			*blob, err = b.ls.Get(*key, replicas[i])
+			l4g.Debug("Key should be on local vnode: %s", replica)
+			*blob, err = b.ls.Get(*key, replica)
 			if err != nil {
 				// err is assumed to be coz data was missing.
 				// so, copy it locally once we get it.
-				l4g.Debug("Key not found on local vnode. Will read repair vode %s for key: %s", replicas[i], *key)
+				l4g.Debug("Key not found on local vnode. Will read repair vode %s for key: %s", replica, *key)
 				copyLocally = true
 				local_vnode_idx = i
 			} else {
@@ -82,10 +82,10 @@ func (b *BlobStore) Get(key *string, blob *[]byte) os.Error {
 		replicas = append(replicas[:local_vnode_idx], replicas[local_vnode_idx+1:]...)
 	}
 	l4g.Debug("Data for key %s not found locally. Trying other replicas.", *key)
-	for idx := range replicas {
-		err = b.getRemoteBlob(key, blob, replicas[idx])
+	for _, replica := range replicas {
+		err = b.getRemoteBlob(key, blob, replica)
 		if err == nil {
-			l4g.Debug("Got data for key %s from remote: %s", *key, replicas[idx].String())
+			l4g.Debug("Got data for key %s from remote: %s", *key, replica.String())
 			if copyLocally {
 
 				l4g.Debug("ReadRepair: Copying key %s to local vnode: %s", *key, local_vnode.String())
@@ -94,7 +94,7 @@ func (b *BlobStore) Get(key *string, blob *[]byte) os.Error {
 			}
 			return nil
 		} else {
-			l4g.Info("Couldnt get key %s from remote replica %s. Error: %s", *key, replicas[idx], err.String())
+			l4g.Info("Couldnt get key %s from remote replica %s. Error: %s", *key, replica, err.String())
 		}
 	}
 
@@ -141,11 +141,11 @@ func (b *BlobStore) Put(blob *[]byte, key *string) (err os.Error) {
 	if err != nil {
 		return err
 	}
-	for i := range replicas {
+	for _, replica := range replicas {
 		// look for a local one first.
-		if isLocalVnode(replicas[i]) {
-			l4g.Debug("Data should be on local vnode: %s", replicas[i])
-			err := b.ls.Put(blob, *key, replicas[i])
+		if isLocalVnode(replica) {
+			l4g.Debug("Data should be on local vnode: %s", replica)
+			err := b.ls.Put(blob, *key, replica)
 			if err != nil {
 				// local put failed for some reason.
 				// TODO: how to handle?
@@ -163,17 +163,17 @@ func (b *BlobStore) Put(blob *[]byte, key *string) (err os.Error) {
 	// the number of writes that need to succeed will be customizable.
 	l4g.Debug("Data should be on remote vnode.")
 	one_passed := false
-	for i := range replicas {
+	for _, replica := range replicas {
 
-		l4g.Debug("Trying to store to %s.", replicas[i].String())
+		l4g.Debug("Trying to store to %s.", replica.String())
 		if !one_passed {
-			err = b.putRemoteBlob(blob, key, replicas[i])
+			err = b.putRemoteBlob(blob, key, replica)
 			if err == nil {
-				l4g.Debug("Data stored on vnode %s.", replicas[i].String())
+				l4g.Debug("Data stored on vnode %s.", replica.String())
 				one_passed = true
 			}
 		} else {
-			go b.putRemoteBlob(blob, key, replicas[i])
+			go b.putRemoteBlob(blob, key, replica)
 		}
 	}
 

@@ -30,8 +30,8 @@ func (k *KeySpace) GetVnodes() (vnodes VnodeArray, err os.Error) {
 		return nil, err
 	}
 
-	for i := range children {
-		vn, err := NewVnodeFromString(children[i])
+	for _, vstr := range children {
+		vn, err := NewVnodeFromString(vstr)
 		if err == nil {
 			ret = append(ret, vn)
 		} else {
