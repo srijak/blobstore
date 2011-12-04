@@ -12,7 +12,7 @@ import (
 	"strconv"
 )
 
-// bsd -c configfile daemonize
+// bsd -c configfile serve
 // bsd -c configfile add-vnode -121
 // bsd -c configfile rm-vnode -121
 // bsd -c configfile lm-vnodes
@@ -36,7 +36,7 @@ func loadConfigs() *ConfigOpts {
 func usage() {
 	fmt.Printf("Usage: bsd [-c config file] <command>\n\n")
 	fmt.Printf("Commands:\n")
-	fmt.Printf(" daemonize\tstart a blobstore server.\n")
+	fmt.Printf(" serve\tstart a blobstore server.\n")
 	fmt.Printf(" add-vnode <int offset>\tadd a new vnode.Needs to be run from server on which to add vnode.\n")
 	fmt.Printf(" rm-vnode <int offset>\tremove the given vnode.Needs to be run from server from which to remove vnode.\n")
 	fmt.Printf(" ls-vnodes\tlist current vnodes.\n")
@@ -46,8 +46,8 @@ func usage() {
 func runCommand(configs *ConfigOpts, command string, args []string) {
 	var err os.Error
 	switch {
-	case command == "daemonize":
-		err = daemonize(configs)
+	case command == "serve":
+		err = serve(configs)
 	case command == "add-vnode":
 		err = addVnode(configs, args)
 	case command == "rm-vnode":
@@ -119,7 +119,7 @@ func getKeySpace(configs *ConfigOpts) IKeySpace {
 	return k
 }
 
-func daemonize(configs *ConfigOpts) os.Error {
+func serve(configs *ConfigOpts) os.Error {
 	ks := NewKeySpace(configs.ZkRootNode, configs.ZkHosts, 5e6)
 	ks.Connect()
 	rs := &SimpleRep{N: configs.ReplicationFactor}
