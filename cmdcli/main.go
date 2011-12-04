@@ -13,11 +13,14 @@ var hostname = flag.String("h", "localhost", "host to connect to. Default: local
 var port = flag.Int("p", 8080, "port to connect to. Default: 8080")
 
 func usage() {
-	fmt.Printf("Usage: ccli <port> <command>\n\n")
-	fmt.Printf("Commands:\n")
-	fmt.Printf(" put <file>\tput file on blobstore. Return hash.\n")
-	fmt.Printf(" get <hash>\tget data associated with the given hash.\n")
-	fmt.Printf("\n")
+	fmt.Println("\nUsage: ccli -h <host> -p <port> <command>")
+	fmt.Println("Defaults:")
+	fmt.Println(" host: localhost")
+	fmt.Println(" port: 8080")
+	fmt.Println("Commands:")
+	fmt.Println(" put <file>\tput file on blobstore. Returns key.")
+	fmt.Println(" get <key>\tget data associated with the given key. Prints out data to stdout.")
+	fmt.Println("")
 }
 
 func runCommand(command string, rs IRemoteStore, args []string) {
