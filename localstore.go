@@ -60,7 +60,7 @@ func (ds *DiskStore) Get(name string, vn IVnode) ([]byte, os.Error) {
 	return ioutil.ReadFile(full_path)
 }
 
-func (ds *DiskStore) buildBlobPath(vn IVnode, name string) (dir, file string, err os.Error) {
+func (ds *DiskStore) buildBlobPath(vn IVnode, name string) (string, string, os.Error) {
 	// ignores the 4th char (assumes it the separator between algo name and
 	// hash
 	if len(name) < 11 {

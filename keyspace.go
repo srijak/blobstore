@@ -9,10 +9,10 @@ import (
 )
 
 type IKeySpace interface {
-	AddVnode(vnode IVnode) (err os.Error)
-	RemoveVnode(vnode IVnode) (err os.Error)
-	GetVnodes() (vnodes VnodeArray, err os.Error)
-	Connect() (err os.Error)
+	AddVnode(vnode IVnode) os.Error
+	RemoveVnode(vnode IVnode) os.Error
+	GetVnodes() (VnodeArray, os.Error)
+	Connect() os.Error
 }
 
 type KeySpace struct {
@@ -22,7 +22,7 @@ type KeySpace struct {
 	zk        *gozk.ZooKeeper
 }
 
-func (k *KeySpace) GetVnodes() (vnodes VnodeArray, err os.Error) {
+func (k *KeySpace) GetVnodes() (VnodeArray, os.Error) {
 	ret := make(VnodeArray, 0)
 
 	children, _, err := k.zk.Children(k.zkRoot)
@@ -45,10 +45,13 @@ func (k *KeySpace) GetVnodes() (vnodes VnodeArray, err os.Error) {
 	return ret, err
 }
 
-func (k *KeySpace) RemoveVnode(vnode IVnode) (err os.Error) {
+func (k *KeySpace) RemoveVnode(vnode IVnode) os.Error {
 	path := k.getVnodePath(vnode)
 
 	stat, err := k.zk.Exists(path)
+	if err != nil {
+		return err
+	}
 	if stat == nil {
 		// should we just ignore this case? ie, if you try to delete
 		// a vnode that doesn't exists, ignore?
@@ -58,7 +61,7 @@ func (k *KeySpace) RemoveVnode(vnode IVnode) (err os.Error) {
 	return k.zk.Delete(path, -1)
 }
 
-func (k *KeySpace) AddVnode(vnode IVnode) (err os.Error) {
+func (k *KeySpace) AddVnode(vnode IVnode) os.Error {
 	path := k.getVnodePath(vnode)
 
 	stat, err := k.zk.Exists(path)
@@ -84,7 +87,7 @@ func NewKeySpace(rootNode string, servers string, timeoutInMillis int64) *KeySpa
 	return &KeySpace{zkRoot: rootNode, zkServers: servers, zkTimeout: timeoutInMillis * 1000}
 }
 
-func (k *KeySpace) Connect() (err os.Error) {
+func (k *KeySpace) Connect() os.Error {
 	zk, session, err := gozk.Init(k.zkServers, k.zkTimeout)
 	if err != nil {
 		return os.NewError("Couldn't connect: " + err.String())

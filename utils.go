@@ -24,7 +24,7 @@ func (va VnodeArray) Less(i, j int) bool {
 	return va[i].GetOffset() < va[j].GetOffset()
 }
 
-func SearchVnode(vnodes VnodeArray, hash int) (index int) {
+func SearchVnode(vnodes VnodeArray, hash int) int {
 	if !sort.IsSorted(vnodes) {
 		sort.Sort(&vnodes)
 	}

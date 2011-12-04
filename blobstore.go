@@ -130,7 +130,7 @@ func isLocalVnode(vn IVnode) bool {
 	return vn.GetHostname() == h
 }
 
-func (b *BlobStore) Put(blob *[]byte, key *string) (err os.Error) {
+func (b *BlobStore) Put(blob *[]byte, key *string) os.Error {
 	// TODO: get and put are very similiar. Refactor to reuse logic
 	vnodes, err := b.ks.GetVnodes()
 	if err != nil {
