@@ -2,12 +2,13 @@ package blobstore
 
 import (
 	"os"
+	"io"
 	l4g "log4go.googlecode.com/hg"
 )
 
 type IBlobStore interface {
-	Put(blob *[]byte, key *string) os.Error
-	Get(key *string, blob *[]byte) os.Error
+	Put(key *string, r io.Reader) os.Error
+	Get(key *string, w io.Writer) os.Error
 }
 
 type BlobStore struct {
@@ -29,7 +30,7 @@ port int) *BlobStore {
 	return b
 }
 
-func (b *BlobStore) Get(key *string, blob *[]byte) os.Error {
+func (b *BlobStore) Get(key *string, w io.Writer) os.Error {
 	// get replica list
 	// TODO: remove servers that aren't currently up.
 	// If we are in the replica list:
@@ -55,7 +56,7 @@ func (b *BlobStore) Get(key *string, blob *[]byte) os.Error {
 			// this code assumes that there is only one matching local vnode.
 			// i.e that replicas aren't on the same server.
 			l4g.Debug("Key should be on local vnode: %s", replica)
-			*blob, err = b.ls.Get(*key, replica)
+			_, err = b.ls.Get(*key, replica, w)
 			if err != nil {
 				// err is assumed to be coz data was missing.
 				// so, copy it locally once we get it.
@@ -83,14 +84,13 @@ func (b *BlobStore) Get(key *string, blob *[]byte) os.Error {
 	}
 	l4g.Debug("Data for key %s not found locally. Trying other replicas.", *key)
 	for _, replica := range replicas {
-		err = b.getRemoteBlob(key, blob, replica)
+		err = b.getRemoteBlob(key, replica, w)
 		if err == nil {
 			l4g.Debug("Got data for key %s from remote: %s", *key, replica.String())
 			if copyLocally {
-
 				l4g.Debug("ReadRepair: Copying key %s to local vnode: %s", *key, local_vnode.String())
-
-				go b.ls.Put(blob, *key, local_vnode)
+				// go b.ls.Put(blob, *key, local_vnode)
+				l4g.Error("ReadRepaid not implemented")
 			}
 			return nil
 		} else {
@@ -101,24 +101,13 @@ func (b *BlobStore) Get(key *string, blob *[]byte) os.Error {
 	return os.NewError("Could not get from any of the replicas")
 }
 
-func (b *BlobStore) getRemoteBlob(key *string, blob *[]byte, vn IVnode) os.Error {
-
-	r, err := b.rsf.GetClient(vn.GetHostname(), b.port)
-	if err != nil {
-		return err
-	}
-
-	return r.Get(key, blob)
+func (b *BlobStore) getRemoteBlob(key *string, vn IVnode, w io.Writer) os.Error {
+	return os.NewError("Blob is on remote replica. Not implemented yet.")
 }
 
-func (b *BlobStore) putRemoteBlob(blob *[]byte, key *string, vn IVnode) os.Error {
+func (b *BlobStore) putRemoteBlob(key *string, vn IVnode, r io.Reader) os.Error {
 
-	r, err := b.rsf.GetClient(vn.GetHostname(), b.port)
-	if err != nil {
-		return err
-	}
-
-	return r.Put(blob, key)
+	return os.NewError("Blob is on remote replica. Not implemented yet.")
 }
 
 func isLocalVnode(vn IVnode) bool {
@@ -130,13 +119,12 @@ func isLocalVnode(vn IVnode) bool {
 	return vn.GetHostname() == h
 }
 
-func (b *BlobStore) Put(blob *[]byte, key *string) os.Error {
+func (b *BlobStore) Put(key *string, r io.Reader) os.Error {
 	// TODO: get and put are very similiar. Refactor to reuse logic
 	vnodes, err := b.ks.GetVnodes()
 	if err != nil {
 		return err
 	}
-	*key = GetHash(blob)
 	replicas, err := b.rs.Replicas(*key, vnodes)
 	if err != nil {
 		return err
@@ -145,7 +133,7 @@ func (b *BlobStore) Put(blob *[]byte, key *string) os.Error {
 		// look for a local one first.
 		if isLocalVnode(replica) {
 			l4g.Debug("Data should be on local vnode: %s", replica)
-			err := b.ls.Put(blob, *key, replica)
+			_, err := b.ls.Put(*key, replica, r)
 			if err != nil {
 				// local put failed for some reason.
 				// TODO: how to handle?
@@ -167,13 +155,13 @@ func (b *BlobStore) Put(blob *[]byte, key *string) os.Error {
 
 		l4g.Debug("Trying to store to %s.", replica.String())
 		if !one_passed {
-			err = b.putRemoteBlob(blob, key, replica)
+			err = b.putRemoteBlob(key, replica, r)
 			if err == nil {
 				l4g.Debug("Data stored on vnode %s.", replica.String())
 				one_passed = true
 			}
 		} else {
-			go b.putRemoteBlob(blob, key, replica)
+			go b.putRemoteBlob(key, replica, r)
 		}
 	}
 

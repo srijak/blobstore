@@ -2,16 +2,17 @@ package blobstore
 
 import (
 	"os"
+	"io"
 	"fmt"
 	"path/filepath"
 	"strings"
-	"io/ioutil"
+	//	"io/ioutil"
 	l4g "log4go.googlecode.com/hg"
 )
 
 type ILocalStore interface {
-	Get(name string, vn IVnode) ([]byte, os.Error)
-	Put(blob *[]byte, name string, vn IVnode) os.Error
+	Get(name string, vn IVnode, w io.Writer) (written int64, err os.Error)
+	Put(name string, vn IVnode, r io.Reader) (written int64, err os.Error)
 }
 
 type DiskStore struct {
@@ -22,15 +23,16 @@ func NewDiskStore(rootDir string) *DiskStore {
 	d := &DiskStore{rootDir: rootDir}
 	return d
 }
-func (ds *DiskStore) Put(blob *[]byte, name string, vn IVnode) os.Error {
+func (ds *DiskStore) Put(name string, vn IVnode, r io.Reader) (written int64, err os.Error) {
+	written = 0
 	dir_path, full_path, err := ds.buildBlobPath(vn, name)
 	if err != nil {
-		return err
+		return
 	}
 
 	err = os.MkdirAll(dir_path, 0700)
 	if err != nil {
-		return err
+		return
 	}
 
 	_, err = os.Stat(full_path)
@@ -40,27 +42,34 @@ func (ds *DiskStore) Put(blob *[]byte, name string, vn IVnode) os.Error {
 		// TODO: check to verify size of the blobs are same
 		//       and log that we tried to add existing blob.
 		l4g.Info("Blob already exists at %s", full_path)
-		return nil
+		return
+	}
+	f, err := os.Create(full_path)
+	defer f.Close()
+	if err != nil {
+		return
 	}
 
-	return ioutil.WriteFile(full_path, *blob, 0600)
+	written, err = io.Copy(f, r)
+	return
 }
 
-func (ds *DiskStore) Get(name string, vn IVnode) ([]byte, os.Error) {
+func (ds *DiskStore) Get(name string, vn IVnode, w io.Writer) (written int64, err os.Error) {
+	written = 0
 	_, full_path, err := ds.buildBlobPath(vn, name)
 	if err != nil {
-		return nil, err
+		return
 	}
-	_, err = os.Stat(full_path)
+	f, err := os.Open(full_path)
+	defer f.Close()
 	if err != nil {
-		msg := fmt.Sprintf("Blob not found under: %s", full_path)
-		return nil, os.NewError(msg)
+		return
 	}
-
-	return ioutil.ReadFile(full_path)
+	written, err = io.Copy(w, f)
+	return
 }
 
-func (ds *DiskStore) buildBlobPath(vn IVnode, name string) (string, string, os.Error) {
+func (ds *DiskStore) buildBlobPath(vn IVnode, name string) (dir, file string, err os.Error) {
 	// ignores the 4th char (assumes it the separator between algo name and
 	// hash
 	if len(name) < 11 {
