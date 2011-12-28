@@ -148,7 +148,7 @@ func getTestBlobStore() *BlobStore {
 	ks := &TestKeySpace{vnodes: vnodes}
 	rs := &SimpleRep{N: 2}
 	ls := &TestLocalStore{make(map[string]string)}
-	rsf := &TestRemoteStoreFactory{make(map[string]IRemoteStore)}
+	rsf := &TestRemoteStoreFactory{make(map[string]IBlobStore)}
 
 	return NewBlobStore(ks, rs, ls, rsf, 8089)
 }
@@ -157,25 +157,26 @@ type TestRemoteStore struct {
 	m map[string]string
 }
 
-func (rs *TestRemoteStore) Put(blob *[]byte, key *string) os.Error {
-	rs.m[*key] = string(*blob)
+func (rs *TestRemoteStore) Put(key *string, r io.Reader) os.Error {
+	b, _ := ioutil.ReadAll(r)
+	rs.m[*key] = string(b)
 	return nil
 }
 
-func (rs *TestRemoteStore) Get(key *string, blob *[]byte) os.Error {
+func (rs *TestRemoteStore) Get(key *string, w io.Writer) os.Error {
 	if val, ok := rs.m[*key]; ok {
-		*blob = []byte(val)
-		return nil
+		_, err := w.Write([]byte(val))
+		return err
 	}
 	return os.NewError("Key not present.")
 }
 
 type TestRemoteStoreFactory struct {
-	m map[string]IRemoteStore
+	m map[string]IBlobStore
 }
 
 func (r *TestRemoteStoreFactory) GetClient(hostname string,
-port int) (IRemoteStore, os.Error) {
+port int) (IBlobStore, os.Error) {
 	name := fmt.Sprintf("%s:%d", hostname, port)
 	if val, ok := r.m[name]; ok {
 		return val, nil
